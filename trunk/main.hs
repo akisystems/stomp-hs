@@ -1,3 +1,6 @@
+module Main
+where 
+
 import Stomp
 import System
 
