@@ -3,6 +3,8 @@ module Stomp (
   disconnect,
   send,
   subscribe,
+  withSubscriptionDo,
+  subscription,
   Listener (..)
 )
 
@@ -80,22 +82,22 @@ headersStr  = concat . map (\(x,y) -> concat [x,": ",y,"\n"])
     
 netSend :: Handle -> Command -> Headers -> String -> IO ()
 netSend h cmd hdrs body = do
-  let hdrs' = ("content-length",show $ length body):hdrs
-  let str = concat [show cmd,"\n",headersStr hdrs',"\n",body,"\n\NUL"]
+  --let hdrs' = ("content-length",show $ length body):hdrs
+  let str = concat [show cmd,"\n",headersStr hdrs,"\n",body,"\n\000"]
   hPutStr h str
   hFlush h
   putStrLn "data sent .. : "
   putStrLn str
 
-subscribe :: Client -> Destination -> Headers -> Listener a -> IO ()    
-subscribe (Client h) dest headers listener = do
+subscribe :: Client -> Destination -> Headers -> IO ()
+subscribe (Client h) dest headers  = do
   netSend h SUBSCRIBE  (("destination",dest):headers)  ""
   print $ "subscribed to " ++ dest ++ " .."
-  listenWith h listener
-  
-  
-listenWith :: Handle -> Listener a -> IO ()                 
-listenWith h listener = do 
-  (cmd,headers,body) <- parse h
-  (onMessage listener) headers body
-  listenWith h listener
+
+subscription :: Client -> IO (Headers,String)
+subscription client@(Client h) = do
+  (_,headers,body) <- parse h
+  return (headers,body)
+
+withSubscriptionDo :: IO () -> IO ()
+withSubscriptionDo  io = io >>  withSubscriptionDo io
