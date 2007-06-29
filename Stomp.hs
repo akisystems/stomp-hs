@@ -67,9 +67,9 @@ connect host port headers = withSocketsDo $ do
   h <- connectTo host  (PortNumber port)
   hSetBuffering h NoBuffering
   netSend h CONNECT headers ""
-  resp <- parse h
-  print "connected .."
-  return $ Client h
+  (cmd,_,_) <- parse h
+  if cmd == "CONNECTED" then return $ Client h
+                        else fail "connection failed" 
 
 disconnect :: Client -> Headers -> IO ()
 disconnect (Client h) hdrs = netSend h DISCONNECT hdrs "" >> hClose h
@@ -82,17 +82,15 @@ headersStr  = concat . map (\(x,y) -> concat [x,": ",y,"\n"])
     
 netSend :: Handle -> Command -> Headers -> String -> IO ()
 netSend h cmd hdrs body = do
-  --let hdrs' = ("content-length",show $ length body):hdrs
-  let str = concat [show cmd,"\n",headersStr hdrs,"\n",body,"\n\000"]
+  let hdrs' = ("content-length",show $  length body):hdrs
+  let str = concat [show cmd,"\n",headersStr hdrs',"\n",body,"\000"]
   hPutStr h str
   hFlush h
-  putStrLn "data sent .. : "
-  putStrLn str
+
 
 subscribe :: Client -> Destination -> Headers -> IO ()
 subscribe (Client h) dest headers  = do
   netSend h SUBSCRIBE  (("destination",dest):headers)  ""
-  print $ "subscribed to " ++ dest ++ " .."
 
 subscription :: Client -> IO (Headers,String)
 subscription client@(Client h) = do
