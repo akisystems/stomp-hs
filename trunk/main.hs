@@ -8,9 +8,9 @@ main = do
   args <- getArgs
   client <- connect "localhost" 61613 []
   subscribe client (args !! 0) [] 
-  let subscript = subscription client
+  let queue = subscription client
   withSubscriptionDo   $ do
-         (hdrs,msg) <- subscript 
+         (hdrs,msg) <- queue
          print (hdrs,msg)
 
         
